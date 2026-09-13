@@ -383,3 +383,20 @@
 ### Notes
 * Verified build compiles successfully with no TypeScript errors.
 * Preserved standard WASD keyboard inputs for laptops/desktops.
+
+## 2026-09-13 (Night Sky Stars Visibility Fix)
+
+### Changes Made
+* Procedural Star Field Rendering Fix:
+  - Fixed root cause where scene atmospheric fog (`far: 85`) completely extinguished the stars located at radius `140-155` due to default `PointsMaterial.fog = true`.
+  - Added `fog={false}` explicitly to `<pointsMaterial>` in `<ProceduralStars>` to ensure stars remain brightly visible through the night sky.
+  - Added dynamically generated radial glow star texture via HTML5 canvas, transforming raw square points into luminous circular celestial bodies.
+  - Increased star count to 1000 and added subtle color tinting (pure white, ice blue, warm gold, soft lavender) with twinkling opacity animation.
+  - Verified toggle responsiveness with the Quick Settings "⭐ Stars [ON/OFF]" button.
+
+### Files Modified
+* `src/game/CityScene.tsx`
+
+### Notes
+* Starfield renders smoothly with zero FPS impact using single draw-call BufferGeometry and AdditiveBlending.
+

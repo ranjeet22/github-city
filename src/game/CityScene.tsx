@@ -569,37 +569,63 @@ const Clouds: React.FC<{ isNight: boolean }> = ({ isNight }) => {
 }
 
 /**
- * Procedural Star Field component that distributes stars randomly on a sphere,
- * with low-frequency twinkling.
+ * Procedural Star Field component that distributes stars randomly on a dome,
+ * with soft circular glowing points, varied colors, and low-frequency twinkling.
  */
 const ProceduralStars: React.FC<{ isNight: boolean; visible: boolean }> = ({ isNight, visible }) => {
   const pointsRef = useRef<THREE.Points>(null)
 
+  // Circular glowing star texture created on a 32x32 canvas
+  const starTexture = useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 32
+    canvas.height = 32
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16)
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)')
+      gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.85)')
+      gradient.addColorStop(0.5, 'rgba(224, 242, 254, 0.4)')
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)')
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, 32, 32)
+    }
+    const texture = new THREE.CanvasTexture(canvas)
+    return texture
+  }, [])
+
   const [positions, colors] = useMemo(() => {
-    const count = 600
+    const count = 1000
     const pos = new Float32Array(count * 3)
     const cols = new Float32Array(count * 3)
 
+    const palette = [
+      new THREE.Color('#ffffff'), // Bright white
+      new THREE.Color('#e0f2fe'), // Soft icy blue
+      new THREE.Color('#fef08a'), // Warm gold
+      new THREE.Color('#c7d2fe'), // Soft indigo/violet
+    ]
+
     for (let i = 0; i < count; i++) {
-      // Uniform random distribution on a sphere
+      // Uniform random distribution on upper hemisphere
       const theta = Math.random() * 2.0 * Math.PI
-      const phi = Math.acos(2.0 * Math.random() - 1.0)
-      const r = 145 // Just inside the sky gradient sphere (180)
+      const phi = Math.random() * (Math.PI * 0.45) // 0 to ~81 degrees elevation
+      const r = 140 + Math.random() * 15 // radius 140-155, inside the 180 sky gradient
 
       const x = r * Math.sin(phi) * Math.cos(theta)
-      // Keep stars above the horizon (upper hemisphere)
-      const y = Math.abs(r * Math.sin(phi) * Math.sin(theta))
-      const z = r * Math.cos(phi)
+      const y = r * Math.cos(phi) // Above the horizon (0 to r)
+      const z = r * Math.sin(phi) * Math.sin(theta)
 
       pos[i * 3] = x
       pos[i * 3 + 1] = y
       pos[i * 3 + 2] = z
 
-      // Variable star brightness
-      const brightness = 0.3 + Math.random() * 0.7
-      cols[i * 3] = brightness
-      cols[i * 3 + 1] = brightness
-      cols[i * 3 + 2] = brightness
+      // Pick color from palette and modulate brightness
+      const baseColor = palette[Math.floor(Math.random() * palette.length)]
+      const brightness = 0.6 + Math.random() * 0.4
+      cols[i * 3] = baseColor.r * brightness
+      cols[i * 3 + 1] = baseColor.g * brightness
+      cols[i * 3 + 2] = baseColor.b * brightness
     }
 
     return [pos, cols]
@@ -609,8 +635,8 @@ const ProceduralStars: React.FC<{ isNight: boolean; visible: boolean }> = ({ isN
     if (!pointsRef.current || !isNight || !visible) return
     const time = state.clock.getElapsedTime()
     const material = pointsRef.current.material as THREE.PointsMaterial
-    // Twinkle: slow modulation of points opacity
-    material.opacity = 0.6 + Math.sin(time * 1.5) * 0.3
+    // Twinkle: smooth modulation of points opacity
+    material.opacity = 0.75 + Math.sin(time * 1.8) * 0.2
   })
 
   return (
@@ -626,13 +652,15 @@ const ProceduralStars: React.FC<{ isNight: boolean; visible: boolean }> = ({ isN
         />
       </bufferGeometry>
       <pointsMaterial
-        size={1.0}
+        map={starTexture}
+        size={2.8}
         sizeAttenuation={true}
         vertexColors
         transparent
-        opacity={0.8}
+        opacity={0.85}
         depthWrite={false}
         blending={THREE.AdditiveBlending}
+        fog={false}
       />
     </points>
   )
